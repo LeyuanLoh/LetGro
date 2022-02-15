@@ -1,0 +1,70 @@
+stages:
+  - mavenbuild
+  - maventest
+  - autoDeploy
+  - androidbuild
+  - androidtest
+
+maven-build:
+  stage: mavenbuild
+  tags:
+      - BACKEND
+  script:
+      - cd Backend/backend
+      - mvn package -B
+
+maven-test:
+  stage: maventest
+  tags:
+    - BACKEND
+  script:
+    - cd Backend/backend
+    - mvn test
+    - mvn package -B
+  artifacts:
+    paths:
+      - Backend/backend/target/*.jar
+ 
+autoDeploy:
+  stage: autoDeploy
+  tags:
+    - BACKEND
+  script:
+    - cd Backend/backend
+    - mvn test
+    - mvn package -B
+    - sudo mv target/backend-0.0.1-SNAPSHOT.jar /target/letGro-backend.jar
+    - sudo systemctl stop letGro-backend    
+    - sudo systemctl start letGro-backend
+  only:
+    refs:
+      - master
+    changes:
+      - Backend/**/*
+
+android-build:
+  image: javiersantos/android-ci:latest
+  stage: androidbuild
+  before_script:
+    - export GRADLE_USER_HOME='pwd'/.gradle
+    - chmod +x ./Frontend/LetsGro/gradlew
+  tags:
+    - FRONTEND
+  script:
+    - cd Frontend/LetsGro/
+    - ./gradlew assemble
+  artifacts:
+    paths:
+      - Frontend/LetsGro/app/build/outputs/
+
+unitTests:
+ image: javiersantos/android-ci:latest
+ stage: androidtest
+ before_script:
+  - export GRADLE_USER_HOME='pwd'/.gradle
+  - chmod +x ./Frontend/LetsGro/gradlew
+ tags:
+  - FRONTEND
+ script:
+  - cd Frontend/LetsGro/
+  - ./gradlew assemble
